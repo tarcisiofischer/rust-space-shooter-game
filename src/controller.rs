@@ -9,6 +9,7 @@ pub struct Controller {
     pub up_pressed : bool,
     pub down_pressed : bool,
     pub fire_pressed : bool,
+    pub fire_just_pressed : bool,
     pub just_changed : bool,
 }
 
@@ -21,6 +22,7 @@ impl Controller {
             up_pressed: false,
             down_pressed: false,
             fire_pressed: false,
+            fire_just_pressed: false,
             just_changed: false,
         }
     }
@@ -28,6 +30,7 @@ impl Controller {
 
 pub fn update_controller(event_pump : &mut EventPump, controller : &mut Controller) {
     controller.just_changed = false;
+    controller.fire_just_pressed = false;
     for event in event_pump.poll_iter() {
         match event {
             Event::Quit { .. } => controller.quit = true,
@@ -70,6 +73,7 @@ pub fn update_controller(event_pump : &mut EventPump, controller : &mut Controll
 
             Event::KeyDown { keycode: Some(Keycode::Space), repeat: false, .. } => {
                 controller.fire_pressed = true;
+                controller.fire_just_pressed = true;
                 controller.just_changed = true;
             },
             Event::KeyUp { keycode: Some(Keycode::Space), repeat: false, .. } => {
