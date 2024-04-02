@@ -43,7 +43,7 @@ fn main() {
     let ships_texture = texture_creator.load_texture("assets/ships.png").unwrap();
     let projectiles_texture = texture_creator.load_texture("assets/projectiles.png").unwrap();
 
-    let mut pos = Point::new(64 * SCALE_FACTOR as i32, 128 * SCALE_FACTOR as i32);
+    let mut player = Point::new(64 * SCALE_FACTOR as i32, 128 * SCALE_FACTOR as i32);
     let mut projectiles = vec![];
     let mut enemies = vec![];
     let mut enemy_spawn_cooldown = 10;
@@ -56,19 +56,19 @@ fn main() {
         }
 
         if controller.right_pressed {
-            pos.x += 5;
+            player.x += 5;
         }
         if controller.left_pressed {
-            pos.x -= 5;
+            player.x -= 5;
         }
         if controller.up_pressed {
-            pos.y -= 5;
+            player.y -= 5;
         }
         if controller.down_pressed {
-            pos.y += 5;
+            player.y += 5;
         }
         if controller.fire_pressed && controller.just_changed {
-            projectiles.push(pos);
+            projectiles.push(player);
         }
         projectiles.retain_mut(|projectile| {
             projectile.y -= 12;
@@ -96,13 +96,19 @@ fn main() {
 
         for projectile in &projectiles {
             enemies.retain(|enemy| {
-                return !check_aabb(Rect::new(projectile.x, projectile.y, 8, 8), Rect::new(enemy.x, enemy.y, 8, 8));
-            })
+                return !check_aabb(Rect::new(projectile.x, projectile.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR), Rect::new(enemy.x, enemy.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR));
+            });
+        }
+        for enemy in &enemies {
+            if check_aabb(Rect::new(enemy.x, enemy.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR), Rect::new(player.x, player.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)) {
+                player.x = 0;
+                player.y = 0;
+            }
         }
 
         canvas.clear();
         canvas.copy(&bg_texture, Rect::new(0, 0, 128, 256), Rect::new(0, 0, 128 * SCALE_FACTOR, 256 * SCALE_FACTOR)).unwrap();
-        canvas.copy(&ships_texture, Rect::new(8, 0, 8, 8), Rect::new(pos.x, pos.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)).unwrap();
+        canvas.copy(&ships_texture, Rect::new(8, 0, 8, 8), Rect::new(player.x, player.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)).unwrap();
         for enemy in &enemies {
             canvas.copy(&ships_texture, Rect::new(40, 0, 8, 8), Rect::new(enemy.x, enemy.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)).unwrap();
         }
