@@ -42,8 +42,7 @@ fn main() {
     let projectiles_texture = texture_creator.load_texture("assets/projectiles.png").unwrap();
 
     let mut pos = Point::new(64 * SCALE_FACTOR as i32, 128 * SCALE_FACTOR as i32);
-    let mut is_shooting = false;
-    let mut projectile_pos = Point::new(0, 0);
+    let mut projectiles = vec![];
     let mut enemy_pos = Point::new(54 * SCALE_FACTOR as i32, 0);
     'running: loop {
         update_controller(&mut event_pump, &mut controller);
@@ -64,16 +63,13 @@ fn main() {
         if controller.down_pressed {
             pos.y += 5;
         }
-        if controller.fire_pressed && controller.just_changed && !is_shooting {
-            is_shooting = true;
-            projectile_pos = pos;
+        if controller.fire_pressed && controller.just_changed {
+            projectiles.push(pos);
         }
-        if is_shooting {
-            projectile_pos.y -= 12;
-            if projectile_pos.y < 0 {
-                is_shooting = false;
-            }
-        }
+        projectiles.retain_mut(|projectile| {
+            projectile.y -= 12;
+            return projectile.y >= 0;
+        });
         if enemy_pos.y < 256 * SCALE_FACTOR as i32 {
             enemy_pos.y += 4;
             enemy_pos.x += ((enemy_pos.y as f32 / 24.0).sin() * 8.0) as i32;
@@ -82,11 +78,10 @@ fn main() {
             enemy_pos.x = 54 * SCALE_FACTOR as i32;
         }
 
-        if is_shooting {
-            if check_aabb(Rect::new(projectile_pos.x, projectile_pos.y, 8, 8), Rect::new(enemy_pos.x, enemy_pos.y, 8, 8)) {
+        for projectile in &projectiles {
+            if check_aabb(Rect::new(projectile.x, projectile.y, 8, 8), Rect::new(enemy_pos.x, enemy_pos.y, 8, 8)) {
                 enemy_pos.y = -8;
                 enemy_pos.x = 54 * SCALE_FACTOR as i32;
-                is_shooting = false;
             }
         }
 
@@ -94,8 +89,8 @@ fn main() {
         canvas.copy(&bg_texture, Rect::new(0, 0, 128, 256), Rect::new(0, 0, 128 * SCALE_FACTOR, 256 * SCALE_FACTOR)).unwrap();
         canvas.copy(&ships_texture, Rect::new(8, 0, 8, 8), Rect::new(pos.x, pos.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)).unwrap();
         canvas.copy(&ships_texture, Rect::new(40, 0, 8, 8), Rect::new(enemy_pos.x, enemy_pos.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)).unwrap();
-        if is_shooting {
-            canvas.copy(&projectiles_texture, Rect::new(16, 0, 8, 8), Rect::new(projectile_pos.x, projectile_pos.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)).unwrap();
+        for projectile in &projectiles {
+            canvas.copy(&projectiles_texture, Rect::new(16, 0, 8, 8), Rect::new(projectile.x, projectile.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)).unwrap();
         }
         canvas.present();
 
