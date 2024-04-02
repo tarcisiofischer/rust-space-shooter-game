@@ -8,6 +8,7 @@ use std::time::Duration;
 use sdl2::rect::{Point, Rect};
 use crate::controller::{Controller, update_controller};
 use rand::Rng;
+use sdl2::render::{Texture, WindowCanvas};
 
 const SCALE_FACTOR : u32 = 2;
 const MAX_ENEMIES : usize = 12;
@@ -19,6 +20,51 @@ fn check_aabb(a: Rect, b: Rect) -> bool {
         a.y       < b.y + b.h &&
         a.y + a.h > b.y
     ;
+}
+
+struct Player<'rawtexture> {
+    pub pos : Point,
+    texture : &'rawtexture Texture<'rawtexture>,
+    state : PlayerState,
+}
+
+enum PlayerState {
+    Idle,
+    MovingLeft,
+    MovingRight,
+}
+
+impl<'rawtexture> Player<'rawtexture> {
+
+    fn paint(&self, canvas : &mut WindowCanvas) {
+        match self.state {
+            PlayerState::Idle => {
+                canvas.copy(
+                    &self.texture,
+                    Rect::new(8, 0, 8, 8),
+                    Rect::new(self.pos.x, self.pos.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)
+                ).unwrap();
+            }
+            PlayerState::MovingLeft => {
+                canvas.copy(
+                    &self.texture,
+                    Rect::new(0, 0, 8, 8),
+                    Rect::new(self.pos.x, self.pos.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)
+                ).unwrap();
+            }
+            PlayerState::MovingRight => {
+                canvas.copy(
+                    &self.texture,
+                    Rect::new(16, 0, 8, 8),
+                    Rect::new(self.pos.x, self.pos.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)
+                ).unwrap();
+            }
+        }
+    }
+
+    fn set_state(&mut self, new_state: PlayerState) {
+        self.state = new_state;
+    }
 }
 
 fn main() {
@@ -43,7 +89,11 @@ fn main() {
     let ships_texture = texture_creator.load_texture("assets/ships.png").unwrap();
     let projectiles_texture = texture_creator.load_texture("assets/projectiles.png").unwrap();
 
-    let mut player = Point::new(64 * SCALE_FACTOR as i32, 128 * SCALE_FACTOR as i32);
+    let mut player = Player{
+        pos: Point::new(64 * SCALE_FACTOR as i32, 128 * SCALE_FACTOR as i32),
+        texture: &ships_texture,
+        state: PlayerState::Idle,
+    };
     let mut projectiles = vec![];
     let mut enemies = vec![];
     let mut enemy_spawn_cooldown = 10;
@@ -56,19 +106,22 @@ fn main() {
         }
 
         if controller.right_pressed {
-            player.x += 5;
-        }
-        if controller.left_pressed {
-            player.x -= 5;
+            player.pos.x += 5;
+            player.set_state(PlayerState::MovingRight);
+        } else if controller.left_pressed {
+            player.pos.x -= 5;
+            player.set_state(PlayerState::MovingLeft);
+        } else {
+            player.set_state(PlayerState::Idle);
         }
         if controller.up_pressed {
-            player.y -= 5;
+            player.pos.y -= 5;
         }
         if controller.down_pressed {
-            player.y += 5;
+            player.pos.y += 5;
         }
         if controller.fire_pressed && controller.just_changed {
-            projectiles.push(player);
+            projectiles.push(player.pos);
         }
         projectiles.retain_mut(|projectile| {
             projectile.y -= 12;
@@ -100,15 +153,16 @@ fn main() {
             });
         }
         for enemy in &enemies {
-            if check_aabb(Rect::new(enemy.x, enemy.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR), Rect::new(player.x, player.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)) {
-                player.x = 0;
-                player.y = 0;
+            if check_aabb(Rect::new(enemy.x, enemy.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR), Rect::new(player.pos.x, player.pos.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)) {
+                player.pos.x = 0;
+                player.pos.y = 0;
             }
         }
 
         canvas.clear();
         canvas.copy(&bg_texture, Rect::new(0, 0, 128, 256), Rect::new(0, 0, 128 * SCALE_FACTOR, 256 * SCALE_FACTOR)).unwrap();
-        canvas.copy(&ships_texture, Rect::new(8, 0, 8, 8), Rect::new(player.x, player.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)).unwrap();
+        player.paint(&mut canvas);
+
         for enemy in &enemies {
             canvas.copy(&ships_texture, Rect::new(40, 0, 8, 8), Rect::new(enemy.x, enemy.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)).unwrap();
         }
