@@ -32,11 +32,10 @@ fn main() {
     let ships_texture = texture_creator.load_texture("assets/ships.png").unwrap();
     let projectiles_texture = texture_creator.load_texture("assets/projectiles.png").unwrap();
 
-    let mut pos_x = 0;
-    let mut pos_y = 0;
+    let mut pos = (64 * SCALE_FACTOR as i32, 128 * SCALE_FACTOR as i32);
     let mut is_shooting = false;
-    let mut shot_pos_x = 0;
-    let mut shot_pos_y = 0;
+    let mut projectile_pos = (0, 0);
+    let mut enemy_pos = (54 * SCALE_FACTOR as i32, 0);
     'running: loop {
         update_controller(&mut event_pump, &mut controller);
 
@@ -45,34 +44,41 @@ fn main() {
         }
 
         if controller.right_pressed {
-            pos_x += 5;
+            pos.0 += 5;
         }
         if controller.left_pressed {
-            pos_x -= 5;
+            pos.0 -= 5;
         }
         if controller.up_pressed {
-            pos_y -= 5;
+            pos.1 -= 5;
         }
         if controller.down_pressed {
-            pos_y += 5;
+            pos.1 += 5;
         }
         if controller.fire_pressed && controller.just_changed && !is_shooting {
             is_shooting = true;
-            shot_pos_x = pos_x;
-            shot_pos_y = pos_y;
+            projectile_pos = pos;
         }
         if is_shooting {
-            shot_pos_y -= 12;
-            if shot_pos_y < 0 {
+            projectile_pos.1 -= 12;
+            if projectile_pos.1 < 0 {
                 is_shooting = false;
             }
+        }
+        if enemy_pos.1 < 256 * SCALE_FACTOR as i32 {
+            enemy_pos.1 += 4;
+            enemy_pos.0 += ((enemy_pos.1 as f32 / 24.0).sin() * 8.0) as i32;
+        } else {
+            enemy_pos.1 = -8;
+            enemy_pos.0 = 54 * SCALE_FACTOR as i32;
         }
 
         canvas.clear();
         canvas.copy(&bg_texture, Rect::new(0, 0, 128, 256), Rect::new(0, 0, 128 * SCALE_FACTOR, 256 * SCALE_FACTOR)).unwrap();
-        canvas.copy(&ships_texture, Rect::new(8, 0, 8, 8), Rect::new(pos_x, pos_y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)).unwrap();
+        canvas.copy(&ships_texture, Rect::new(8, 0, 8, 8), Rect::new(pos.0, pos.1, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)).unwrap();
+        canvas.copy(&ships_texture, Rect::new(40, 0, 8, 8), Rect::new(enemy_pos.0, enemy_pos.1, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)).unwrap();
         if is_shooting {
-            canvas.copy(&projectiles_texture, Rect::new(16, 0, 8, 8), Rect::new(shot_pos_x, shot_pos_y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)).unwrap();
+            canvas.copy(&projectiles_texture, Rect::new(16, 0, 8, 8), Rect::new(projectile_pos.0, projectile_pos.1, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)).unwrap();
         }
         canvas.present();
 
