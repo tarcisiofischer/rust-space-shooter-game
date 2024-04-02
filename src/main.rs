@@ -5,10 +5,19 @@ extern crate sdl2;
 use sdl2::image::LoadTexture;
 use sdl2::pixels::Color;
 use std::time::Duration;
-use sdl2::rect::Rect;
+use sdl2::rect::{Point, Rect};
 use crate::controller::{Controller, update_controller};
 
 const SCALE_FACTOR : u32 = 2;
+
+fn check_aabb(a: Rect, b: Rect) -> bool {
+    return
+        a.x       < b.x + b.w &&
+        a.x + a.w > b.x       &&
+        a.y       < b.y + b.h &&
+        a.y + a.h > b.y
+    ;
+}
 
 fn main() {
     let sdl_context = sdl2::init().unwrap();
@@ -32,10 +41,10 @@ fn main() {
     let ships_texture = texture_creator.load_texture("assets/ships.png").unwrap();
     let projectiles_texture = texture_creator.load_texture("assets/projectiles.png").unwrap();
 
-    let mut pos = (64 * SCALE_FACTOR as i32, 128 * SCALE_FACTOR as i32);
+    let mut pos = Point::new(64 * SCALE_FACTOR as i32, 128 * SCALE_FACTOR as i32);
     let mut is_shooting = false;
-    let mut projectile_pos = (0, 0);
-    let mut enemy_pos = (54 * SCALE_FACTOR as i32, 0);
+    let mut projectile_pos = Point::new(0, 0);
+    let mut enemy_pos = Point::new(54 * SCALE_FACTOR as i32, 0);
     'running: loop {
         update_controller(&mut event_pump, &mut controller);
 
@@ -44,41 +53,49 @@ fn main() {
         }
 
         if controller.right_pressed {
-            pos.0 += 5;
+            pos.x += 5;
         }
         if controller.left_pressed {
-            pos.0 -= 5;
+            pos.x -= 5;
         }
         if controller.up_pressed {
-            pos.1 -= 5;
+            pos.y -= 5;
         }
         if controller.down_pressed {
-            pos.1 += 5;
+            pos.y += 5;
         }
         if controller.fire_pressed && controller.just_changed && !is_shooting {
             is_shooting = true;
             projectile_pos = pos;
         }
         if is_shooting {
-            projectile_pos.1 -= 12;
-            if projectile_pos.1 < 0 {
+            projectile_pos.y -= 12;
+            if projectile_pos.y < 0 {
                 is_shooting = false;
             }
         }
-        if enemy_pos.1 < 256 * SCALE_FACTOR as i32 {
-            enemy_pos.1 += 4;
-            enemy_pos.0 += ((enemy_pos.1 as f32 / 24.0).sin() * 8.0) as i32;
+        if enemy_pos.y < 256 * SCALE_FACTOR as i32 {
+            enemy_pos.y += 4;
+            enemy_pos.x += ((enemy_pos.y as f32 / 24.0).sin() * 8.0) as i32;
         } else {
-            enemy_pos.1 = -8;
-            enemy_pos.0 = 54 * SCALE_FACTOR as i32;
+            enemy_pos.y = -8;
+            enemy_pos.x = 54 * SCALE_FACTOR as i32;
+        }
+
+        if is_shooting {
+            if check_aabb(Rect::new(projectile_pos.x, projectile_pos.y, 8, 8), Rect::new(enemy_pos.x, enemy_pos.y, 8, 8)) {
+                enemy_pos.y = -8;
+                enemy_pos.x = 54 * SCALE_FACTOR as i32;
+                is_shooting = false;
+            }
         }
 
         canvas.clear();
         canvas.copy(&bg_texture, Rect::new(0, 0, 128, 256), Rect::new(0, 0, 128 * SCALE_FACTOR, 256 * SCALE_FACTOR)).unwrap();
-        canvas.copy(&ships_texture, Rect::new(8, 0, 8, 8), Rect::new(pos.0, pos.1, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)).unwrap();
-        canvas.copy(&ships_texture, Rect::new(40, 0, 8, 8), Rect::new(enemy_pos.0, enemy_pos.1, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)).unwrap();
+        canvas.copy(&ships_texture, Rect::new(8, 0, 8, 8), Rect::new(pos.x, pos.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)).unwrap();
+        canvas.copy(&ships_texture, Rect::new(40, 0, 8, 8), Rect::new(enemy_pos.x, enemy_pos.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)).unwrap();
         if is_shooting {
-            canvas.copy(&projectiles_texture, Rect::new(16, 0, 8, 8), Rect::new(projectile_pos.0, projectile_pos.1, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)).unwrap();
+            canvas.copy(&projectiles_texture, Rect::new(16, 0, 8, 8), Rect::new(projectile_pos.x, projectile_pos.y, 8 * SCALE_FACTOR, 8 * SCALE_FACTOR)).unwrap();
         }
         canvas.present();
 
