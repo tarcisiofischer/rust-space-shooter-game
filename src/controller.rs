@@ -8,6 +8,7 @@ pub struct Controller {
     pub right_pressed : bool,
     pub up_pressed : bool,
     pub down_pressed : bool,
+    pub fire_pressed : bool,
     pub just_changed : bool,
 }
 
@@ -19,6 +20,7 @@ impl Controller {
             right_pressed: false,
             up_pressed: false,
             down_pressed: false,
+            fire_pressed: false,
             just_changed: false,
         }
     }
@@ -63,6 +65,15 @@ pub fn update_controller(event_pump : &mut EventPump, controller : &mut Controll
             },
             Event::KeyUp { keycode: Some(Keycode::Down), repeat: false, .. } => {
                 controller.down_pressed = false;
+                controller.just_changed = true;
+            },
+
+            Event::KeyDown { keycode: Some(Keycode::Space), repeat: false, .. } => {
+                controller.fire_pressed = true;
+                controller.just_changed = true;
+            },
+            Event::KeyUp { keycode: Some(Keycode::Space), repeat: false, .. } => {
+                controller.fire_pressed = false;
                 controller.just_changed = true;
             },
 
